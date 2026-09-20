@@ -1,0 +1,8 @@
+# 文本按仓库里的 LF 存，检出时按平台。二进制一律不转换，
+# 不标的话 Windows 上的 autocrlf 有可能把 exe 里的字节改掉。
+* text=auto eol=lf
+*.exe binary
+*.png binary
+*.woff binary
+*.woff2 binary
+*.ttf binary

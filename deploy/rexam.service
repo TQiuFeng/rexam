@@ -1,0 +1,40 @@
+# rexam 后端的 systemd 单元。放到 /etc/systemd/system/rexam.service
+#
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now rexam
+#   sudo journalctl -u rexam -f        # 看日志
+#
+# 一台机器跑多个节点时，复制成 rexam@.service 用模板实例，
+# 每个实例用不同的 BIND_ADDR（8080 / 8081 / …），nginx upstream 里都加上。
+
+[Unit]
+Description=rexam 在线考试系统
+After=network-online.target postgresql.service redis-server.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=rexam
+Group=rexam
+WorkingDirectory=/opt/rexam
+# 配置放在 EnvironmentFile 里，不要写进这个文件（它对所有人可读）
+EnvironmentFile=/etc/rexam/rexam.env
+ExecStart=/opt/rexam/rexam
+Restart=always
+RestartSec=3
+
+# 交卷洪峰时并发连接多，放开文件描述符上限
+LimitNOFILE=65536
+
+# 收紧权限：只读根文件系统，没有新特权，私有临时目录
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/rexam
+
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

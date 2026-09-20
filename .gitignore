@@ -1,0 +1,5 @@
+# 这个仓库只放构建产物，不放源码，也不放任何真实配置
+.env
+config.toml
+state.json
+*.log
