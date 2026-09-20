@@ -12,12 +12,14 @@ every machine walks itself into the paper and locks the screen.
 being polished and will have rough edges that have not surfaced, so the code stays closed until it
 settles. Unpack and deploy.
 
-![Answering in the browser](docs/screenshots/web/12-take-exam.png)
+![Answering in the browser](docs/screenshots/web-en/12-take-exam.png)
 
-> **A note on language.** The exam-room client speaks English when you set `lang = "en"`, and the
-> screenshots of it below are the real thing. The **web interface is Chinese only** for now, so
-> the browser screenshots on this page are in Chinese. Exam content — stems, options, candidate
-> names — is always shown in whatever language it was written in, in either interface.
+> **A note on language.** Both the web interface and the exam-room client speak English and
+> Chinese. On the web there is a 中 / EN switch in the header and the choice is remembered per
+> browser; the client takes `lang = "en"` in its config. Every screenshot on this page is the real
+> English interface. Exam content — stems, options, candidate names — is always shown in whatever
+> language it was written in, in either interface, so an English interface over a Chinese paper
+> still shows a Chinese paper.
 
 ---
 
@@ -64,7 +66,7 @@ machine enters the paper as the candidate assigned to that seat. See
 
 | | |
 |---|---|
-| ![My exams](docs/screenshots/web/13-my-exams.png) | ![Sign in](docs/screenshots/web/01-login.png) |
+| ![My exams](docs/screenshots/web-en/13-my-exams.png) | ![Sign in](docs/screenshots/web-en/01-login.png) |
 
 ---
 
@@ -89,7 +91,7 @@ blank, the answer list gets a row, and the preview shows ①②③ exactly as th
 it. Nobody types underscores by hand, so nobody discovers at save time that they drew three
 lines and filled in two answers.
 
-![Editing a fill-in-the-blank question](docs/screenshots/web/04-fill-editor.png)
+![Editing a fill-in-the-blank question](docs/screenshots/web-en/04-fill-editor.png)
 
 **Two ways to build a paper:**
 
@@ -99,11 +101,11 @@ lines and filled in two answers.
   publishing: if the bank is too small it tells you how many questions are missing, right then,
   instead of on exam day when candidates cannot get in.
 
-![Randomised paper](docs/screenshots/web/05-random-paper.png)
+![Randomised paper](docs/screenshots/web-en/05-random-paper.png)
 
 For bulk entry, paste JSON into the importer; the format is documented in the UI.
 
-![Question bank](docs/screenshots/web/03-questions.png)
+![Question bank](docs/screenshots/web-en/03-questions.png)
 
 ---
 
@@ -117,20 +119,20 @@ An exam is a draft, published, or closed. A draft never reaches candidates; publ
 makes it appear under a candidate's "My exams"; closing it force-submits every paper still
 outstanding.
 
-![Exam list](docs/screenshots/web/02-exams.png)
+![Exam list](docs/screenshots/web-en/02-exams.png)
 
 Each exam has a **six-character room code**; exam-room machines use it plus a seat number to
 place themselves. The code can be reset at any time, and the reset can unbind every machine in
 the room at once — if a room code leaks, changing the code alone is not enough.
 
-![Exam details](docs/screenshots/web/06-exam-detail.png)
+![Exam details](docs/screenshots/web-en/06-exam-detail.png)
 
 The **invigilation page** shows every seat live: no candidate assigned, no machine bound,
 waiting to start, answering, disconnected, submitted — plus how many times each candidate has
 switched away from the window. There is a seat-map view and a list view. A teacher can
 **force-submit** or **grant extra time** for one candidate, or close the whole exam.
 
-![Live invigilation](docs/screenshots/web/07-proctor.png)
+![Live invigilation](docs/screenshots/web-en/07-proctor.png)
 
 **Answers do not get lost.** Every answer is written back to the server as it is given: into
 Redis first, then flushed into PostgreSQL in batches by a background job. After a power cut, a
@@ -158,18 +160,18 @@ field (e.g. "2 marks for each of the three steps, 2 marks for mentioning duplica
 connections") — the AI reads it, and the more specific it is the closer the marks land. Humans
 mark against it too.
 
-![AI mark with teacher review](docs/screenshots/web/08-ai-grading.png)
+![AI mark with teacher review](docs/screenshots/web-en/08-ai-grading.png)
 
 Afterwards there are **statistics**: mean, highest and lowest, pass rate, the distribution across
 score bands, and **the success rate per question** — the worst questions sort to the top, so it
 is obvious which ones to go over in class. Results export.
 
-![Statistics](docs/screenshots/web/09-stats.png)
+![Statistics](docs/screenshots/web-en/09-stats.png)
 
 Whether candidates may see their mark, and whether they may see the answers, is decided per exam.
 The client never overrides that.
 
-![Result sheet](docs/screenshots/web/14-result.png)
+![Result sheet](docs/screenshots/web-en/14-result.png)
 
 ---
 
@@ -183,14 +185,14 @@ jobs; current load; and the AI marking queue with its success and failure counts
 "disk 97% full; once it fills, the database stops accepting writes" comes from the server, so
 any other client reading the same endpoint reaches the same conclusion.
 
-![System monitoring](docs/screenshots/web/10-system.png)
+![System monitoring](docs/screenshots/web-en/10-system.png)
 
 One detail worth spelling out: **a stopped heartbeat and "nothing to do" are different things.**
 The flush job ticks every 3 seconds whether or not there are answers waiting; if its heartbeat
 goes quiet for more than four times its interval it is flagged as stalled. That is what tells
 "idle" apart from "dead".
 
-![Background jobs](docs/screenshots/web/11-jobs.png)
+![Background jobs](docs/screenshots/web-en/11-jobs.png)
 
 > The numbers on this page describe **this API node only**. The database and Redis are shared by
 > the whole cluster; everything else (uptime, background jobs, counters, CPU / memory / disk)
@@ -337,7 +339,7 @@ anti-aliased feathering, which is the bulk of the per-frame cost in a pure softw
 > number, and the machine works as a seat terminal. It cannot stop window switching, so it suits
 > lower-stakes settings.
 >
-> ![Browser seat terminal](docs/screenshots/web/15-seat.png)
+> ![Browser seat terminal](docs/screenshots/web-en/15-seat.png)
 
 ---
 
