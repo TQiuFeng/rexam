@@ -230,14 +230,31 @@ boxes).
 On the question palette, **filled means answered and hollow means unanswered** — never green.
 Nothing has been marked yet, and a candidate reads green as "I got that one right".
 
-Two things it **cannot** do. Saying so is better than letting anyone overestimate it:
+### About Ctrl+Alt+Del
 
-- **`Ctrl+Alt+Del` cannot be blocked.** It is Windows' secure attention sequence and a low-level
-  keyboard hook is designed not to reach it. What the client can do is record the lost focus,
-  report it, and grab the window back when the candidate returns.
-- **It cannot do anything about hardware** — phones, notes, a second device. The client makes
-  software-level cheating leave a trace and become inconvenient; the rest is the proctor walking
-  the room.
+**The key combination itself cannot be intercepted.** It is Windows' secure attention sequence,
+handled by Winlogon, and a low-level keyboard hook is designed not to reach it — that is the
+mechanism which guarantees the screen you get really did come from the system. It is not an
+oversight to work around.
+
+So hard lockdown takes a different route: **if the screen cannot be blocked, leave nothing on it
+to click.** Task Manager, Lock, Change a password, Sign out and Switch user are each disabled, so
+a candidate who presses it sees a screen of greyed-out options, presses Esc and comes back — and
+the lost focus has already been recorded and reported by the watchdog. Four of those five settings
+live under `HKCU`, so **no administrator rights are needed**; the candidate's own account is enough.
+
+Blocking the screen outright is only possible with Windows' **Keyboard Filter** (an optional
+feature of Enterprise and IoT Enterprise). On a machine that has it, turn on `block_sas`. It is off
+by default because it is a **machine-level** switch restored when the client exits: if the client is
+killed (power cut, process ended from another account) it will not be restored, and that machine
+will refuse `Ctrl+Alt+Del` from then on with nothing to explain why. Confirm the restore works on
+one machine before rolling it out.
+
+### What it still cannot do
+
+**Nothing about hardware** — phones, notes, a second device. The client makes software-level
+cheating leave a trace and become inconvenient; the rest is the proctor walking the room. Saying so
+is better than letting anyone overestimate it.
 
 Every violation is **reported, never judged locally**. How many switches count as too many, and
 whether that forces a submission, is decided by the server — a judgement made on the candidate's
@@ -249,7 +266,21 @@ process too, so a machine is never handed back to the lab with Task Manager stil
 
 ### Installing on an exam machine
 
-Put `rexam-client.exe` and `config.toml` in the same folder and add it to Startup.
+**One command**, no file editing:
+
+```bat
+rexam-client.exe --install --server=https://exam.example.com --exit-password=change-me --lock=soft
+```
+
+It writes `config.toml` itself and registers itself to start at boot (a Run entry under `HKCU`, so
+no administrator rights), then exits. A deployment script loops over the machines and is done.
+`--uninstall` removes the autostart entry.
+
+**The seat number is optional**: without `--seat-no` the machine stops at the binding screen for the
+invigilator to type the room code and seat once. Rooms with a fixed seating chart keep passing
+`--seat-no=7` per machine.
+
+If you would rather write the config by hand, put `config.toml` next to the exe:
 
 ```toml
 server = "https://exam.example.com"
