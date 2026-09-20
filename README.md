@@ -1,141 +1,107 @@
-# rexam — Online Exam System (Binary Release)
+# rexam 在线考试系统（发布版）
 
-Online exam system in Rust: 8 question types, AI grading, power-loss recovery, plus a Windows
-kiosk client where the seat is the identity — no login, auto-enter at start, full lockdown.
+[English](README.en.md)
 
-This repository ships **built artifacts only** — no source code. Everything here is ready to
-deploy: a server binary, the compiled web frontend, and the Windows exam-room client.
+Rust 写的在线考试系统：八种题型、AI 判卷、断电续答，另配 Windows 考场客户端——座位即身份，考生不输账号密码，开考自动进入并锁屏。
 
-![Waiting for the exam to start](docs/screenshots/1-等待开考.png)
+本仓库**只放编译好的产物，不含源码**。里面的东西可以直接部署：服务端程序、打包好的前端、以及考场机器用的客户端。
 
-## What's in the box
+![等待开考](docs/screenshots/1-等待开考.png)
 
-| Path | What it is |
+## 里面有什么
+
+| 路径 | 是什么 |
 |---|---|
-| `server/rexam.exe` | Backend server, Windows x64. Serves the whole REST API. |
-| `server/.env.example` | Configuration template. Copy to `.env` next to the binary. |
-| `client/rexam-client.exe` | Exam-room client, Windows x64. Single file, no runtime needed. |
-| `client/config.toml.example` | Client configuration template. |
-| `web/` | Compiled frontend. Static files — serve with nginx or any web server. |
-| `deploy/` | nginx site config and a systemd unit. |
-| `docs/` | Proctor's manual (Chinese) and interface screenshots. |
+| `server/rexam.exe` | 后端服务，Windows x64。整套 REST 接口都在这里。 |
+| `server/.env.example` | 配置模板。复制成 `.env` 放在程序同目录。 |
+| `client/rexam-client.exe` | 考场客户端，Windows x64。单个文件，不装任何运行时。 |
+| `client/config.toml.example` | 客户端配置模板。 |
+| `web/` | 编译好的前端，纯静态文件，交给 nginx 或任意 web 服务器托管。 |
+| `deploy/` | nginx 站点配置和 systemd 单元。 |
+| `docs/` | 监考操作手册、界面截图。 |
 
-## What it does
+## 能做什么
 
-**Question bank** — single choice, multiple choice, true/false, fill-in-the-blank, numeric,
-ordering, matching, and essay. Fill-in accepts several acceptable answers per blank; numeric
-accepts a tolerance; ordering and matching options are shuffled per candidate.
+**题库**　单选、多选、判断、填空、数值、排序、匹配、简答八种题型。填空题每个空可以配多个同义答案；数值题支持误差范围；排序题和匹配题展示时按考生打乱。
 
-**Papers** — fixed papers, or random papers drawn by category / type / difficulty so every
-candidate gets a different set. You can dry-run the draw before publishing.
+**组卷**　固定卷（题目写死）和随机卷（按分类、题型、难度抽题，每个考生一套不同的卷子）。发布前可以试抽一次，确认题库够用。
 
-**Grading** — the first seven types are graded by rule. Essays (and fill-in answers that did not
-score full marks) can go to a teacher, to an AI, or to the AI first with the teacher reviewing.
-Any OpenAI-compatible endpoint works; DeepSeek and Qwen are pre-configured in the template.
-The AI's original score is kept even after a teacher overrides it.
+**判分**　前七种题型按规则自动判。简答题、以及规则判分没拿满分的填空题，可以交给教师、交给 AI、或者 AI 先判教师复核三种方式。任意 OpenAI 兼容接口都能接，模板里预置了 DeepSeek 和通义千问。教师改分之后，AI 原来给的分仍然留档可对照。
 
-**Answers survive anything** — every answer is written to the server as it is typed. Power cut,
-blue screen, network drop: the candidate logs back in and continues where they left off. The
-countdown runs on server time, so it never resets and a wrong clock on the exam machine
-does not matter.
+**答案不会丢**　考生每答一题就写回服务端。断电、蓝屏、断网，重新进来直接续答。倒计时按服务端时间算，不会重置，考场机器时钟不准也不影响。
 
-**Proctoring** — seat assignment, per-seat device binding, live monitoring, forced submission,
-time extension, tab-switch counting with automatic submission over the limit.
+**监考**　排座位、每个座位绑定一台机器、实时监考、强制交卷、补时、切屏计数与超限自动交卷。
 
-## The exam-room client
+## 考场客户端
 
-Candidates do not type an account or a password. Seats are assigned in advance; each machine
-binds to its seat number on boot and polls the server. The moment the proctor starts the exam,
-the server hands that seat's candidate their credentials and the client enters the paper by itself.
+考生不输账号密码。座位提前排好，机器开机自己绑到座位号上并开始轮询；监考老师一点开考，服务端就把这个座位对应考生的凭证发下来，客户端自动进答题页。
 
-While the exam is running the screen is locked down: exclusive fullscreen, always on top, no
-title bar, and a low-level keyboard hook that swallows `Win`, `Alt+Tab`, `Alt+Esc`, `Ctrl+Esc`,
-`Ctrl+Shift+Esc`, `Alt+F4`, `Alt+Space` and `PrintScreen`. A watchdog reports and reclaims focus
-the moment the window loses it. A stricter level additionally disables Task Manager and USB
-storage and terminates blacklisted processes.
+答题期间屏幕锁定：独占全屏、窗口置顶、没有标题栏，低级键盘钩子吞掉 `Win`、`Alt+Tab`、`Alt+Esc`、`Ctrl+Esc`、`Ctrl+Shift+Esc`、`Alt+F4`、`Alt+空格` 和 `PrintScreen`。窗口一丢焦点，看门狗立刻上报并把它抢回前台。更严的一档还会禁用任务管理器、禁用 U 盘存储、并结束黑名单里的程序。
 
-Two things it deliberately cannot do, stated plainly so nobody over-trusts it:
+有两件事它**做不到**，写清楚比藏着强，免得有人高估它：
 
-- **`Ctrl+Alt+Del` cannot be blocked.** It is the Windows Secure Attention Sequence and no
-  low-level hook can see it. What the client does instead is record the lost focus and report it,
-  then pull the window back when the candidate returns.
-- **Hardware cheating is out of scope** — phones, notes, a second machine. The client makes
-  software-level cheating leave a trail and become inconvenient. The rest is up to the proctor.
+- **`Ctrl+Alt+Del` 拦不住。** 它是 Windows 的安全注意序列，低级键盘钩子按设计就摸不到它。客户端能做的是把这次失焦记下来上报，等考生回来时再把窗口抢回前台。
+- **硬件手段管不了**——手机、纸条、第二台设备。客户端只负责让软件层面的作弊留下记录并且变麻烦，剩下的靠监考老师走动。
 
-Every violation is only *reported*. Whether a candidate is auto-submitted is decided by the
-server, never by the client — a judgement made on the candidate's own machine is not trustworthy.
+所有违规都**只上报**。切屏几次算超限、要不要自动交卷，一律由服务端判定，客户端不自己算——跑在考生机器上的判断本来就不可信。
 
-Registry changes are restored to the value that was read before they were changed, including the
-case where the key did not exist. A `Drop` guard covers the process being killed, so a machine is
-never handed back with Task Manager still disabled.
+改过的注册表项在退出时按**改之前读到的原值**还原，包括「本来就没有这个值」的情况；进程被强杀也有兜底，不会把机器带着「任务管理器已禁用」还给机房。
 
 |  |  |
 |---|---|
-| ![Answering](docs/screenshots/2-答题页.png) | ![Ordering](docs/screenshots/3-排序题.png) |
-| ![Matching](docs/screenshots/4-连线题.png) | ![Seat binding](docs/screenshots/5-机位绑定.png) |
+| ![答题页](docs/screenshots/2-答题页.png) | ![排序题](docs/screenshots/3-排序题.png) |
+| ![连线题](docs/screenshots/4-连线题.png) | ![机位绑定](docs/screenshots/5-机位绑定.png) |
 
-## Running the server
+## 跑起来
 
-You need **PostgreSQL 16+** and **Redis 6.2+** (6.2 is the floor — the flusher uses `LPOP key count`).
+需要 **PostgreSQL 16+** 和 **Redis 6.2+**（6.2 是下限，刷盘用到了 `LPOP key count`）。
 
 ```bat
 copy server\.env.example server\.env
-:: edit .env: database URL, redis URL, and the two secrets below
+:: 改 .env：数据库地址、Redis 地址，以及下面强调的那两项
 server\rexam.exe
 ```
 
-The server creates its own tables on first start and creates the initial administrator if the
-user table is empty. It listens on `BIND_ADDR` (default `0.0.0.0:8080`).
+首次启动会自动建表；用户表为空时会创建初始管理员。监听地址由 `BIND_ADDR` 决定，默认 `0.0.0.0:8080`。
 
-> **Change these two before exposing the server to anyone.**
-> `JWT_SECRET` — the template value is a placeholder, not a secret.
-> `ADMIN_PASSWORD` — if you leave it unset the binary falls back to a **compiled-in default**,
-> which means anyone who knows this project can log in as administrator.
+> **对外开放之前，这两项必须改掉。**
+> `JWT_SECRET`——模板里那串是占位符，不是密钥。
+> `ADMIN_PASSWORD`——不设的话程序会退回**编译进去的默认值**，等于任何知道这个项目的人都能用管理员身份登进来。
 
-### Serving the frontend
+### 前端怎么托管
 
-`web/` is a static bundle. Point nginx at it and proxy `/api` to the server — `deploy/nginx.conf`
-does exactly that, including the history-API fallback the single-page app needs.
+`web/` 是一堆静态文件。nginx 指过去，再把 `/api` 反代到服务端即可。`deploy/nginx.conf` 就是这么配的，也带了单页应用需要的深层路由回落。
 
-### A note on platforms
+### 关于平台
 
-The server binary here is **Windows x64**, because that is what the build machine is. The systemd
-unit in `deploy/` is for a Linux build and is included for reference. There is no Linux binary in
-this release; producing one requires building from source on Linux (or with a cross toolchain).
+这里的服务端是 **Windows x64** 版，因为构建机就是 Windows。`deploy/` 里的 systemd 单元是给 Linux 版用的，一并放进来供参考。本次发布**没有 Linux 版二进制**，需要的话得在 Linux 上（或用交叉工具链）从源码编译。
 
-## Deploying the exam-room client
+## 考场机器怎么装
 
-Put `rexam-client.exe` and a `config.toml` in the same folder and add it to Startup.
+把 `rexam-client.exe` 和 `config.toml` 放同一个文件夹，加进「启动」项。
 
 ```toml
 server = "https://exam.example.com"
-lock = "soft"              # soft needs no admin rights; hard also disables Task Manager and USB
-room_code = "E86HDZ"       # this exam's room code, shown on the exam detail page
-seat_no = 7                # different on every machine
-exit_password = "set me"   # the proctor types this to quit; leave empty and anyone can quit
+lock = "soft"              # soft 不需要管理员权限；hard 另外还会禁任务管理器和 U 盘
+room_code = "E86HDZ"       # 本场考试的考场码，在考试详情页看
+seat_no = 7                # 每台机器不同
+exit_password = "改掉它"    # 监考老师退出时输入；留空的话谁都能退出
 ```
 
-For imaging a lab, the seat number can come from the command line instead, one line per machine:
+批量装机时座位号可以用命令行给，一台一条：
 
 ```bat
 rexam-client.exe --server=https://exam.example.com --room-code=E86HDZ --seat-no=7
 ```
 
-`config.toml.example` documents every option and what changing it affects. To quit, press
-`Ctrl+Shift+Q` and enter the proctor password. With `lock = "off"` a visible exit button appears
-instead — that mode is for testing and must never be used for a real exam.
+`config.toml.example` 里每一项都写了改它会影响什么。退出按 `Ctrl+Shift+Q` 然后输监考口令。把 `lock` 设成 `off` 时界面上会直接出现退出按钮——那是调试用的，正式考试绝不能用。
 
-On old machines without a GPU, or over remote desktop, set `low_graphics = true`. It turns off
-anti-aliasing feathering, which is the bulk of the per-frame cost when rendering in software.
+老机器没有独立显卡、或者通过远程桌面使用时，把 `low_graphics` 打开。它关掉抗锯齿羽化，而纯软件绘制时羽化正是每帧开销的大头。
 
-## Scale
+## 规模
 
-The same build runs a twenty-person quiz and a twenty-thousand-seat sitting; only the number of
-nodes changes. API nodes are stateless, answers are written to Redis and batch-flushed into
-PostgreSQL by a background job, and submission is idempotent, so you can put as many nodes behind
-nginx as you need. Measured on a four-core development box with the database co-located: 200
-candidates submitting at once, graded, in 368 ms, with no answer lost.
+同一套程序，几十人的随堂测验和两万人的统考都能跑，区别只是加机器。API 节点无状态，答案先写 Redis 再由后台任务批量刷进 PostgreSQL，交卷是幂等的，所以 nginx 后面挂多少个节点都行。在一台四核开发机上实测（数据库同机）：200 人同时交卷并完成判分耗时 368 毫秒，零丢失。
 
-## License
+## 许可
 
-Not specified. Contact the repository owner before redistributing.
+未指定。转发前请先联系仓库所有者。
