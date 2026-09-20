@@ -1,143 +1,371 @@
-# rexam — Online Exam System (Binary Release)
+# rexam — Online Exam System
 
-[中文](README.md)
+[中文](README.md) · [Proctor's manual (Chinese)](docs/监考操作手册.md)
 
-Online exam system in Rust: 8 question types, AI grading, power-loss recovery, plus a Windows
-kiosk client where the seat is the identity — no login, auto-enter at start, full lockdown.
+An exam system that covers the whole path from writing questions to publishing marks.
+Eight question types, rule-based marking plus AI marking for free-text answers, and answers
+that survive a power cut. It ships with a Windows exam-room client where **the seat is the
+identity** — candidates type no username and no password. The proctor starts the exam and
+every machine walks itself into the paper and locks the screen.
 
-This repository ships **built artifacts only** — no source code. Everything here is ready to
-deploy: a server binary, the compiled web frontend, and the Windows exam-room client.
+**This repository ships built artifacts only — no source code.** Unpack and deploy.
 
-![Waiting for the exam to start](docs/screenshots/1-等待开考.png)
+![Answering in the browser](docs/screenshots/web/12-take-exam.png)
 
-## What's in the box
+---
 
-| Path | What it is |
+## Contents
+
+- [Who it is for](#who-it-is-for)
+- [Two ways to sit an exam](#two-ways-to-sit-an-exam)
+- [Questions and papers](#questions-and-papers)
+- [Running and invigilating an exam](#running-and-invigilating-an-exam)
+- [Marking and results](#marking-and-results)
+- [System monitoring](#system-monitoring)
+- [The exam-room client](#the-exam-room-client)
+- [Deployment](#deployment)
+- [Before you expose it](#before-you-expose-it)
+- [Scale](#scale)
+- [FAQ](#faq)
+- [What is in this repository](#what-is-in-this-repository)
+
+---
+
+## Who it is for
+
+One program covers three kinds of exam; the difference is which boxes you tick:
+
+| Situation | How it is used |
 |---|---|
-| `server/rexam.exe` | Backend server, Windows x64. Serves the whole REST API. |
-| `server/.env.example` | Configuration template. Copy to `.env` next to the binary. |
-| `client/rexam-client.exe` | Exam-room client, Windows x64. Single file, no runtime needed. |
-| `client/config.toml.example` | Client configuration template. |
-| `web/` | Compiled frontend. Static files — serve with nginx or any web server. |
-| `deploy/` | nginx site config and a systemd unit. |
-| `docs/` | Proctor's manual (Chinese) and interface screenshots. |
+| Quizzes and homework | Candidates open a browser on their own laptop or phone and sign in |
+| Mid-term / final in a computer lab | Install the exam-room client; candidates never touch credentials |
+| High-stakes exams | Client plus strict lockdown plus randomised papers — a different paper per candidate |
 
-## What it does
+Three roles: **admin** manages accounts and the server, **teacher** writes questions, builds
+papers, invigilates and marks, **candidate** sees only their own exams. Teachers cannot reach
+user management or system monitoring; candidates cannot reach anyone else's paper.
 
-**Question bank** — single choice, multiple choice, true/false, fill-in-the-blank, numeric,
-ordering, matching, and essay. Fill-in accepts several acceptable answers per blank; numeric
-accepts a tolerance; ordering and matching options are shuffled per candidate.
+## Two ways to sit an exam
 
-**Papers** — fixed papers, or random papers drawn by category / type / difficulty so every
-candidate gets a different set. You can dry-run the draw before publishing.
+**In a browser** — candidates sign in, open "My exams" and answer. Power cut, closed tab,
+different device: they come back and carry on.
 
-**Grading** — the first seven types are graded by rule. Essays (and fill-in answers that did not
-score full marks) can go to a teacher, to an AI, or to the AI first with the teacher reviewing.
-Any OpenAI-compatible endpoint works; DeepSeek and Qwen are pre-configured in the template.
-The AI's original score is kept even after a teacher overrides it.
+**On the exam-room client** — the lab machine starts the client at boot and binds itself to a
+seat number. The candidate sits down and does nothing; when the proctor starts the exam, that
+machine enters the paper as the candidate assigned to that seat. See
+[the exam-room client](#the-exam-room-client).
 
-**Answers survive anything** — every answer is written to the server as it is typed. Power cut,
-blue screen, network drop: the candidate logs back in and continues where they left off. The
-countdown runs on server time, so it never resets and a wrong clock on the exam machine
-does not matter.
+| | |
+|---|---|
+| ![My exams](docs/screenshots/web/13-my-exams.png) | ![Sign in](docs/screenshots/web/01-login.png) |
 
-**Proctoring** — seat assignment, per-seat device binding, live monitoring, forced submission,
-time extension, tab-switch counting with automatic submission over the limit.
+---
+
+## Questions and papers
+
+**Eight question types.** Every marking rule lives on the server; the client only collects
+what the candidate typed or clicked:
+
+| Type | Marking |
+|---|---|
+| Single choice | Full marks for the right option |
+| Multiple choice | Full marks when exactly right; optionally half marks for a subset of the correct options. Any wrong option scores zero |
+| True / false | Right or wrong |
+| Fill in the blank | **Each blank accepts several synonymous answers**; any of them counts. Marks are split evenly across the blanks |
+| Numeric | Supports a tolerance, e.g. 3.14 ± 0.01 |
+| Ordering | Shuffled when shown; the whole order must be right |
+| Matching | Marks per correct pair. The right column may be longer than the left — the extras are distractors |
+| Free text | Marked by a teacher, by AI, or by AI first with a teacher confirming |
+
+**Blanks are inserted with a button.** Click "insert a blank at the cursor" and the stem gets a
+blank, the answer list gets a row, and the preview shows ①②③ exactly as the candidate will see
+it. Nobody types underscores by hand, so nobody discovers at save time that they drew three
+lines and filled in two answers.
+
+![Editing a fill-in-the-blank question](docs/screenshots/web/04-fill-editor.png)
+
+**Two ways to build a paper:**
+
+- **Fixed** — pick questions from the bank, set marks per question, everybody gets the same paper.
+- **Randomised** — write a few rules (category, type, difficulty range, how many to draw, marks
+  each) and **every candidate gets a different set**. Hit "save and draw a trial paper" before
+  publishing: if the bank is too small it tells you how many questions are missing, right then,
+  instead of on exam day when candidates cannot get in.
+
+![Randomised paper](docs/screenshots/web/05-random-paper.png)
+
+For bulk entry, paste JSON into the importer; the format is documented in the UI.
+
+![Question bank](docs/screenshots/web/03-questions.png)
+
+---
+
+## Running and invigilating an exam
+
+Creating an exam sets three things: the **window** (nobody gets in outside it), the **duration**
+(counted from when each candidate starts), and a row of anti-cheating switches. A candidate's
+deadline is the earlier of "their start time plus the duration" and "the end of the window".
+
+An exam is a draft, published, or closed. A draft never reaches candidates; publishing is what
+makes it appear under a candidate's "My exams"; closing it force-submits every paper still
+outstanding.
+
+![Exam list](docs/screenshots/web/02-exams.png)
+
+Each exam has a **six-character room code**; exam-room machines use it plus a seat number to
+place themselves. The code can be reset at any time, and the reset can unbind every machine in
+the room at once — if a room code leaks, changing the code alone is not enough.
+
+![Exam details](docs/screenshots/web/06-exam-detail.png)
+
+The **invigilation page** shows every seat live: no candidate assigned, no machine bound,
+waiting to start, answering, disconnected, submitted — plus how many times each candidate has
+switched away from the window. There is a seat-map view and a list view. A teacher can
+**force-submit** or **grant extra time** for one candidate, or close the whole exam.
+
+![Live invigilation](docs/screenshots/web/07-proctor.png)
+
+**Answers do not get lost.** Every answer is written back to the server as it is given: into
+Redis first, then flushed into PostgreSQL in batches by a background job. After a power cut, a
+blue screen or a dropped network the candidate resumes exactly where they were. The countdown
+runs on **server time**, so a wrong — or deliberately altered — clock on the exam machine
+changes nothing.
+
+---
+
+## Marking and results
+
+The first seven types are marked the moment the paper is submitted. Free-text answers, and
+fill-in-the-blank answers that did not score full marks by rule, go through one of three routes:
+
+- **Teacher** — mark each answer, optionally with a comment.
+- **AI** — the AI's mark is taken as final.
+- **AI first, teacher confirms** — the AI gives a mark and a short explanation against the mark
+  scheme; the teacher accepts it with one click or overrides it. **The AI's original mark is
+  kept**, so the two can always be compared.
+
+AI marking talks to any **OpenAI-compatible endpoint**; the config template ships DeepSeek and
+Qwen settings. Failed requests are retried, and when the retries run out the answer is handed to
+a human rather than quietly scored zero. Write the mark scheme into the question's "explanation"
+field (e.g. "2 marks for each of the three steps, 2 marks for mentioning duplicate historical
+connections") — the AI reads it, and the more specific it is the closer the marks land. Humans
+mark against it too.
+
+![AI mark with teacher review](docs/screenshots/web/08-ai-grading.png)
+
+Afterwards there are **statistics**: mean, highest and lowest, pass rate, the distribution across
+score bands, and **the success rate per question** — the worst questions sort to the top, so it
+is obvious which ones to go over in class. Results export.
+
+![Statistics](docs/screenshots/web/09-stats.png)
+
+Whether candidates may see their mark, and whether they may see the answers, is decided per exam.
+The client never overrides that.
+
+![Result sheet](docs/screenshots/web/14-result.png)
+
+---
+
+## System monitoring
+
+Admins see the live state of this API node: CPU, memory, disk and swap; PostgreSQL and Redis
+response times and pool usage; the heartbeat and lifetime throughput of the four background
+jobs; current load; and the AI marking queue with its success and failure counts.
+
+**The thresholds live on the server**, and the page only renders the conclusion — a line like
+"disk 97% full; once it fills, the database stops accepting writes" comes from the server, so
+any other client reading the same endpoint reaches the same conclusion.
+
+![System monitoring](docs/screenshots/web/10-system.png)
+
+One detail worth spelling out: **a stopped heartbeat and "nothing to do" are different things.**
+The flush job ticks every 3 seconds whether or not there are answers waiting; if its heartbeat
+goes quiet for more than four times its interval it is flagged as stalled. That is what tells
+"idle" apart from "dead".
+
+![Background jobs](docs/screenshots/web/11-jobs.png)
+
+> The numbers on this page describe **this API node only**. The database and Redis are shared by
+> the whole cluster; everything else (uptime, background jobs, counters, CPU / memory / disk)
+> belongs to whichever machine served the request.
+
+---
 
 ## The exam-room client
 
-Candidates do not type an account or a password. Seats are assigned in advance; each machine
-binds to its seat number on boot and polls the server. The moment the proctor starts the exam,
-the server hands that seat's candidate their credentials and the client enters the paper by itself.
+Windows x64, a single exe, no runtime to install, no browser involved.
 
-While the exam is running the screen is locked down: exclusive fullscreen, always on top, no
-title bar, and a low-level keyboard hook that swallows `Win`, `Alt+Tab`, `Alt+Esc`, `Ctrl+Esc`,
-`Ctrl+Shift+Esc`, `Alt+F4`, `Alt+Space` and `PrintScreen`. A watchdog reports and reclaims focus
-the moment the window loses it. A stricter level additionally disables Task Manager and USB
-storage and terminates blacklisted processes.
+**Candidates type nothing.** Seats are assigned in advance; the machine binds itself to its seat
+number at boot and starts polling. When the proctor starts the exam, the server hands down the
+credential for the candidate in that seat and the client walks into the paper.
 
-Two things it deliberately cannot do, stated plainly so nobody over-trusts it:
-
-- **`Ctrl+Alt+Del` cannot be blocked.** It is the Windows Secure Attention Sequence and no
-  low-level hook can see it. What the client does instead is record the lost focus and report it,
-  then pull the window back when the candidate returns.
-- **Hardware cheating is out of scope** — phones, notes, a second machine. The client makes
-  software-level cheating leave a trail and become inconvenient. The rest is up to the proctor.
-
-Every violation is only *reported*. Whether a candidate is auto-submitted is decided by the
-server, never by the client — a judgement made on the candidate's own machine is not trustworthy.
-
-Registry changes are restored to the value that was read before they were changed, including the
-case where the key did not exist. A `Drop` guard covers the process being killed, so a machine is
-never handed back with Task Manager still disabled.
-
-|  |  |
+| | |
 |---|---|
-| ![Answering](docs/screenshots/2-答题页.png) | ![Ordering](docs/screenshots/3-排序题.png) |
-| ![Matching](docs/screenshots/4-连线题.png) | ![Seat binding](docs/screenshots/5-机位绑定.png) |
+| ![Binding a seat](docs/screenshots/client/01-bind.png) | ![Waiting to start](docs/screenshots/client/02-waiting.png) |
 
-## Running the server
+During the exam the screen is locked down: exclusive fullscreen, always on top, no title bar,
+and a low-level keyboard hook that swallows `Win`, `Alt+Tab`, `Alt+Esc`, `Ctrl+Esc`,
+`Ctrl+Shift+Esc`, `Alt+F4`, `Alt+Space` and `PrintScreen`. The moment the window loses focus a
+watchdog reports it and pulls the window back to the front. The stricter tier also disables Task
+Manager, disables USB mass storage, and kills blacklisted processes.
 
-You need **PostgreSQL 16+** and **Redis 6.2+** (6.2 is the floor — the flusher uses `LPOP key count`).
+All eight question types are drawn natively — this is not a browser in a box. Matching questions
+draw real curves between the columns; ordering rows move out of the way while you are still
+dragging, not after you let go; the tick and the cross on true/false questions are vector
+drawings (no Chinese system font contains ✓ or ✗ — using the characters would render two tofu
+boxes).
 
-```bat
-copy server\.env.example server\.env
-:: edit .env: database URL, redis URL, and the two secrets below
-server\rexam.exe
-```
+| | |
+|---|---|
+| ![Multiple choice](docs/screenshots/client/03-multi.png) | ![True / false](docs/screenshots/client/04-judge.png) |
+| ![Fill in the blank](docs/screenshots/client/05-fill.png) | ![Ordering](docs/screenshots/client/06-sort.png) |
+| ![Matching](docs/screenshots/client/07-match.png) | ![Submitted](docs/screenshots/client/08-submitted.png) |
 
-The server creates its own tables on first start and creates the initial administrator if the
-user table is empty. It listens on `BIND_ADDR` (default `0.0.0.0:8080`).
+On the question palette, **filled means answered and hollow means unanswered** — never green.
+Nothing has been marked yet, and a candidate reads green as "I got that one right".
 
-> **Change these two before exposing the server to anyone.**
-> `JWT_SECRET` — the template value is a placeholder, not a secret.
-> `ADMIN_PASSWORD` — if you leave it unset the binary falls back to a **compiled-in default**,
-> which means anyone who knows this project can log in as administrator.
+Two things it **cannot** do. Saying so is better than letting anyone overestimate it:
 
-### Serving the frontend
+- **`Ctrl+Alt+Del` cannot be blocked.** It is Windows' secure attention sequence and a low-level
+  keyboard hook is designed not to reach it. What the client can do is record the lost focus,
+  report it, and grab the window back when the candidate returns.
+- **It cannot do anything about hardware** — phones, notes, a second device. The client makes
+  software-level cheating leave a trace and become inconvenient; the rest is the proctor walking
+  the room.
 
-`web/` is a static bundle. Point nginx at it and proxy `/api` to the server — `deploy/nginx.conf`
-does exactly that, including the history-API fallback the single-page app needs.
+Every violation is **reported, never judged locally**. How many switches count as too many, and
+whether that forces a submission, is decided by the server — a judgement made on the candidate's
+own machine is not trustworthy in the first place.
 
-### A note on platforms
+Registry values the client changes are restored on exit to **the value that was read before the
+change**, including the case where the value did not exist. There is a fallback for a killed
+process too, so a machine is never handed back to the lab with Task Manager still disabled.
 
-The server binary here is **Windows x64**, because that is what the build machine is. The systemd
-unit in `deploy/` is for a Linux build and is included for reference. There is no Linux binary in
-this release; producing one requires building from source on Linux (or with a cross toolchain).
+### Installing on an exam machine
 
-## Deploying the exam-room client
-
-Put `rexam-client.exe` and a `config.toml` in the same folder and add it to Startup.
+Put `rexam-client.exe` and `config.toml` in the same folder and add it to Startup.
 
 ```toml
 server = "https://exam.example.com"
-lock = "soft"              # soft needs no admin rights; hard also disables Task Manager and USB
-room_code = "E86HDZ"       # this exam's room code, shown on the exam detail page
-seat_no = 7                # different on every machine
-exit_password = "set me"   # the proctor types this to quit; leave empty and anyone can quit
+lock = "soft"                  # soft needs no admin rights; hard also disables Task Manager and USB storage
+room_code = "E86HDZ"           # this exam's room code, shown on the exam details page
+seat_no = 7                    # different on every machine
+exit_password = "change me"    # the proctor types this to exit; empty means anyone can exit
 ```
 
-For imaging a lab, the seat number can come from the command line instead, one line per machine:
+For mass deployment the seat number can come from the command line, one line per machine:
 
 ```bat
 rexam-client.exe --server=https://exam.example.com --room-code=E86HDZ --seat-no=7
 ```
 
-`config.toml.example` documents every option and what changing it affects. To quit, press
-`Ctrl+Shift+Q` and enter the proctor password. With `lock = "off"` a visible exit button appears
-instead — that mode is for testing and must never be used for a real exam.
+`config.toml.example` documents what each setting changes. To exit, press `Ctrl+Shift+Q` and
+enter the proctor password. Setting `lock = "off"` puts an exit button right on screen — that is
+for debugging and must never be used in a real exam. (The client screenshots above were taken in
+debug mode, which is why there is an "exit (debug)" button in the corner.)
 
-On old machines without a GPU, or over remote desktop, set `low_graphics = true`. It turns off
-anti-aliasing feathering, which is the bulk of the per-frame cost when rendering in software.
+On machines with no discrete GPU, or over remote desktop, turn on `low_graphics`. It disables
+anti-aliased feathering, which is the bulk of the per-frame cost in a pure software renderer.
+
+> You can run an exam without the client: open `/seat` in a browser, enter the room code and seat
+> number, and the machine works as a seat terminal. It cannot stop window switching, so it suits
+> lower-stakes settings.
+>
+> ![Browser seat terminal](docs/screenshots/web/15-seat.png)
+
+---
+
+## Deployment
+
+Requires **PostgreSQL 16+** and **Redis 6.2+** (6.2 is the floor — the flush job uses
+`LPOP key count`).
+
+```bat
+copy server\.env.example server\.env
+:: edit .env: database URL, Redis URL, and the two settings called out below
+server\rexam.exe
+```
+
+The first start creates the schema, and creates an initial admin when the user table is empty.
+`BIND_ADDR` decides where it listens; the default is `0.0.0.0:8080`.
+
+**The frontend** is the pile of static files under `web/`. Point nginx at it and reverse-proxy
+`/api` to the server. `deploy/nginx.conf` does exactly that, including the deep-link fallback a
+single-page app needs.
+
+**On platforms**: the server here is a **Windows x64** build, because the build machine is
+Windows. The systemd unit under `deploy/` is for a Linux build and is included for reference.
+**This release has no Linux binary** — for that you need to build from source on Linux, or with a
+cross toolchain.
+
+## Before you expose it
+
+These two must be changed:
+
+- **`JWT_SECRET`** — the string in the template is a placeholder, not a secret.
+- **`ADMIN_PASSWORD`** — if you leave it unset the program falls back to a **compiled-in
+  default**, which means anyone who knows this project can sign in as admin.
+
+Two more suggestions: do not expose the database or Redis to the internet, and put the server
+behind nginx over HTTPS so the client and the browser use the same hostname.
+
+Passwords are stored with argon2, API auth is JWT, and role checks run per endpoint on the
+server — hiding a menu in the frontend does not stop anyone calling the API directly, so nothing
+relies on that.
 
 ## Scale
 
-The same build runs a twenty-person quiz and a twenty-thousand-seat sitting; only the number of
-nodes changes. API nodes are stateless, answers are written to Redis and batch-flushed into
-PostgreSQL by a background job, and submission is idempotent, so you can put as many nodes behind
-nginx as you need. Measured on a four-core development box with the database co-located: 200
-candidates submitting at once, graded, in 368 ms, with no answer lost.
+The same program runs a twenty-person quiz and a twenty-thousand-person exam; the difference is
+how many machines you give it. API nodes are stateless, answers land in Redis and are flushed to
+PostgreSQL in batches, and submission is idempotent, so you can put as many nodes behind nginx as
+you like.
 
-## License
+Measured on a four-core dev box with the database on the same machine: **200 candidates
+submitting at once, marked to completion in 368 ms, nothing lost.**
 
-Not specified. Contact the repository owner before redistributing.
+## FAQ
+
+**A candidate lost power mid-exam. Now what?**
+They boot up and carry on. Everything already answered is there, and the countdown continues on
+server time — it neither resets nor hands out extra minutes.
+
+**Can the exam room be offline?**
+Yes. Put the server, the database and the frontend on machines inside the LAN and point the
+client at the internal address. AI marking needs internet access; if you are not using it, turn
+it off and free-text answers go to teachers.
+
+**Can every candidate get different questions?**
+Use a randomised paper. Rules draw by category, type and difficulty, and no candidate draws the
+same question twice.
+
+**Will the window-switch counter produce false positives?**
+Yes. On some machines a system notification is enough to steal focus. Set the limit to 3–5 rather
+than 1. Zero means unlimited — switches are still recorded, they just do not force a submission.
+
+**What if the AI marks something wrong?**
+Use "AI first, teacher confirms". The teacher edits the mark and the AI's original mark stays on
+record for comparison.
+
+**Can teachers see each other's questions?**
+They share the question bank and the papers, but user management and system monitoring are
+admin-only.
+
+## What is in this repository
+
+| Path | What it is |
+|---|---|
+| `server/rexam.exe` | Backend service, Windows x64. The whole REST API. |
+| `server/.env.example` | Config template. Copy to `.env` next to the executable. |
+| `client/rexam-client.exe` | Exam-room client, Windows x64. One file, no runtime. |
+| `client/config.toml.example` | Client config template; every setting says what changing it does. |
+| `web/` | Compiled frontend — static files for nginx or any web server. |
+| `deploy/` | nginx site config and a systemd unit. |
+| `docs/监考操作手册.md` | End-to-end manual for teachers (Chinese), no technical background needed. |
+| `docs/screenshots/` | The screenshots above. |
+
+Stack: Rust on the server (axum, tokio, sqlx, redis), Vue 3 + Vite + Element Plus on the web, and
+Rust + egui for the natively drawn exam-room client.
+
+## Licence
+
+Unspecified. Please contact the repository owner before redistributing.
