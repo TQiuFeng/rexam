@@ -12,6 +12,11 @@ every machine walks itself into the paper and locks the screen.
 
 ![Answering in the browser](docs/screenshots/web/12-take-exam.png)
 
+> **A note on language.** The exam-room client speaks English when you set `lang = "en"`, and the
+> screenshots of it below are the real thing. The **web interface is Chinese only** for now, so
+> the browser screenshots on this page are in Chinese. Exam content — stems, options, candidate
+> names — is always shown in whatever language it was written in, in either interface.
+
 ---
 
 ## Contents
@@ -193,7 +198,8 @@ goes quiet for more than four times its interval it is flagged as stalled. That 
 
 ## The exam-room client
 
-Windows x64, a single exe, no runtime to install, no browser involved.
+Windows x64, a single exe, no runtime to install, no browser involved. Set `lang = "en"` and
+the whole interface is English, as in the screenshots below.
 
 **Candidates type nothing.** Seats are assigned in advance; the machine binds itself to its seat
 number at boot and starts polling. When the proctor starts the exam, the server hands down the
@@ -201,7 +207,7 @@ credential for the candidate in that seat and the client walks into the paper.
 
 | | |
 |---|---|
-| ![Binding a seat](docs/screenshots/client/01-bind.png) | ![Waiting to start](docs/screenshots/client/02-waiting.png) |
+| ![Binding a seat](docs/screenshots/client-en/01-bind.png) | ![Waiting to start](docs/screenshots/client-en/02-waiting.png) |
 
 During the exam the screen is locked down: exclusive fullscreen, always on top, no title bar,
 and a low-level keyboard hook that swallows `Win`, `Alt+Tab`, `Alt+Esc`, `Ctrl+Esc`,
@@ -217,9 +223,9 @@ boxes).
 
 | | |
 |---|---|
-| ![Multiple choice](docs/screenshots/client/03-multi.png) | ![True / false](docs/screenshots/client/04-judge.png) |
-| ![Fill in the blank](docs/screenshots/client/05-fill.png) | ![Ordering](docs/screenshots/client/06-sort.png) |
-| ![Matching](docs/screenshots/client/07-match.png) | ![Submitted](docs/screenshots/client/08-submitted.png) |
+| ![Multiple choice](docs/screenshots/client-en/03-multi.png) | ![True / false](docs/screenshots/client-en/04-judge.png) |
+| ![Fill in the blank](docs/screenshots/client-en/05-fill.png) | ![Ordering](docs/screenshots/client-en/06-sort.png) |
+| ![Matching](docs/screenshots/client-en/07-match.png) | ![Submitted](docs/screenshots/client-en/08-submitted.png) |
 
 On the question palette, **filled means answered and hollow means unanswered** — never green.
 Nothing has been marked yet, and a candidate reads green as "I got that one right".
@@ -248,15 +254,21 @@ Put `rexam-client.exe` and `config.toml` in the same folder and add it to Startu
 ```toml
 server = "https://exam.example.com"
 lock = "soft"                  # soft needs no admin rights; hard also disables Task Manager and USB storage
+lang = "en"                    # client UI language: "zh" (default) or "en"
 room_code = "E86HDZ"           # this exam's room code, shown on the exam details page
 seat_no = 7                    # different on every machine
 exit_password = "change me"    # the proctor types this to exit; empty means anyone can exit
 ```
 
+`lang` switches the client's own wording between Chinese and English. It does not touch the
+exam itself: stems, options, candidate names and anything else the server sends down are the
+author's content and are shown exactly as written. An English interface over a Chinese paper
+stays a Chinese paper.
+
 For mass deployment the seat number can come from the command line, one line per machine:
 
 ```bat
-rexam-client.exe --server=https://exam.example.com --room-code=E86HDZ --seat-no=7
+rexam-client.exe --server=https://exam.example.com --room-code=E86HDZ --seat-no=7 --lang=en
 ```
 
 `config.toml.example` documents what each setting changes. To exit, press `Ctrl+Shift+Q` and

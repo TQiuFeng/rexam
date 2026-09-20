@@ -1,7 +1,7 @@
 # rexam 现场考试客户端配置。把本文件改名为 config.toml，放在 exe 同目录。
 #
 # 命令行参数会覆盖这里的同名项，装机脚本可以一台一条命令：
-#   rexam-client.exe --server=https://exam.example.com --room-code=E86HDZ --seat-no=7
+#   rexam-client.exe --server=https://exam.example.com --room-code=E86HDZ --seat-no=7 --lang=en
 
 # 考试服务端地址。末尾有没有斜杠都行。
 # 这一项填错整个考场都连不上，而且要等到开考那一刻才会有人发现，装机后务必起一次确认。
@@ -13,6 +13,11 @@ server = "http://127.0.0.1:8080"
 #   hard  soft 的全部，再加禁用任务管理器、进程黑名单巡检、禁用 U 盘存储。
 #         后两项需要管理员权限；拿不到就只是少锁一项并上报，不会影响考试进行。
 lock = "soft"
+
+# 界面语言：zh 简体中文（默认）/ en English。
+# 只影响客户端自己的文案；题干、选项、考生姓名一律按服务端下发的原样显示，
+# 也就是说出的是中文卷子，界面设成 en 也还是中文题目。
+lang = "zh"
 
 # ---- 机位预置：「提前分好座位」就靠这两行 ----
 # 装机时给每台机器写上本考场的考场码和这台机器的座位号，

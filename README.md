@@ -168,7 +168,8 @@ AI 会读它，写得越具体给分越准；人工批改时也一眼能对着�
 
 ## 考场客户端
 
-Windows x64，单个 exe，不装任何运行时，不依赖浏览器。
+Windows x64，单个 exe，不装任何运行时，不依赖浏览器。界面支持中英文，
+`lang = "en"` 时整个客户端是英文的（[英文版说明](README.en.md#the-exam-room-client)里是英文界面的截图）。
 
 **考生不输账号密码。** 座位提前排好，机器开机自己绑到座位号上并开始轮询；
 监考老师一点开考，服务端把这个座位对应考生的凭证发下来，客户端自动进答题页。
@@ -215,6 +216,7 @@ Windows x64，单个 exe，不装任何运行时，不依赖浏览器。
 ```toml
 server = "https://exam.example.com"
 lock = "soft"              # soft 不需要管理员权限；hard 另外还会禁任务管理器和 U 盘
+lang = "zh"                # 界面语言：zh 中文（默认）/ en English
 room_code = "E86HDZ"       # 本场考试的考场码，在考试详情页看
 seat_no = 7                # 每台机器不同
 exit_password = "改掉它"    # 监考老师退出时输入；留空的话谁都能退出
@@ -225,6 +227,9 @@ exit_password = "改掉它"    # 监考老师退出时输入；留空的话谁�
 ```bat
 rexam-client.exe --server=https://exam.example.com --room-code=E86HDZ --seat-no=7
 ```
+
+`lang` 只换客户端自己的文案。题干、选项、考生姓名都是服务端下发的出题人内容，
+一律按原样显示 —— 中文卷子配英文界面，题目还是中文的。
 
 `config.toml.example` 里每一项都写了改它会影响什么。退出按 `Ctrl+Shift+Q` 然后输监考口令。
 把 `lock` 设成 `off` 时界面上会直接出现退出按钮——那是调试用的，正式考试绝不能用
