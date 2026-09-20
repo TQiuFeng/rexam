@@ -8,7 +8,9 @@ that survive a power cut. It ships with a Windows exam-room client where **the s
 identity** — candidates type no username and no password. The proctor starts the exam and
 every machine walks itself into the paper and locks the screen.
 
-**This repository ships built artifacts only — no source code.** Unpack and deploy.
+**This repository ships built artifacts only; the source is not open yet.** The system is still
+being polished and will have rough edges that have not surfaced, so the code stays closed until it
+settles. Unpack and deploy.
 
 ![Answering in the browser](docs/screenshots/web/12-take-exam.png)
 
@@ -230,6 +232,23 @@ boxes).
 On the question palette, **filled means answered and hollow means unanswered** — never green.
 Nothing has been marked yet, and a candidate reads green as "I got that one right".
 
+### Letting candidates leave
+
+**The invigilator decides, not the machine in front of the candidate.**
+
+After a paper is submitted the screen stays locked — someone who finishes early should not get back
+to the desktop while others are still working. The teacher releases the seat from the invigilation
+page and that machine unlocks on its next poll (3 seconds by default). At the end, **closing the
+exam** releases every seat in the room at once, so nobody has to walk the aisles clicking.
+
+That is why no proctor password is needed per machine — and a password stored on a machine the
+candidate can reach was never much of a lock anyway. `exit_password` still exists as an **offline
+fallback**, for when the server is unreachable and a machine has to be freed anyway. Leave it empty
+and the finish screen shows no password box at all.
+
+> To release one machine **mid-exam** (a candidate taken ill, say), force-submit first and then
+> release. Collecting the paper and letting the person go are two different decisions.
+
 ### About Ctrl+Alt+Del
 
 **The key combination itself cannot be intercepted.** It is Windows' secure attention sequence,
@@ -269,12 +288,16 @@ process too, so a machine is never handed back to the lab with Task Manager stil
 **One command**, no file editing:
 
 ```bat
-rexam-client.exe --install --server=https://exam.example.com --exit-password=change-me --lock=soft
+rexam-client.exe --install --server=https://exam.example.com
 ```
 
 It writes `config.toml` itself and registers itself to start at boot (a Run entry under `HKCU`, so
 no administrator rights), then exits. A deployment script loops over the machines and is done.
 `--uninstall` removes the autostart entry.
+
+**No password needed.** Letting candidates go is done from the invigilation page: the teacher
+releases the seat and the unlock travels down to the machine. Nothing is typed on the exam
+machine itself.
 
 **The seat number is optional**: without `--seat-no` the machine stops at the binding screen for the
 invigilator to type the room code and seat once. Rooms with a fixed seating chart keep passing
@@ -288,7 +311,7 @@ lock = "soft"                  # soft needs no admin rights; hard also disables 
 lang = "en"                    # client UI language: "zh" (default) or "en"
 room_code = "E86HDZ"           # this exam's room code, shown on the exam details page
 seat_no = 7                    # different on every machine
-exit_password = "change me"    # the proctor types this to exit; empty means anyone can exit
+exit_password = ""             # offline fallback only; most rooms leave this empty
 ```
 
 `lang` switches the client's own wording between Chinese and English. It does not touch the
@@ -302,8 +325,8 @@ For mass deployment the seat number can come from the command line, one line per
 rexam-client.exe --server=https://exam.example.com --room-code=E86HDZ --seat-no=7 --lang=en
 ```
 
-`config.toml.example` documents what each setting changes. To exit, press `Ctrl+Shift+Q` and
-enter the proctor password. Setting `lock = "off"` puts an exit button right on screen — that is
+`config.toml.example` documents what each setting changes. Setting `lock = "off"` puts an exit
+button right on screen — that is
 for debugging and must never be used in a real exam. (The client screenshots above were taken in
 debug mode, which is why there is an "exit (debug)" button in the corner.)
 
@@ -408,6 +431,15 @@ admin-only.
 
 Stack: Rust on the server (axum, tokio, sqlx, redis), Vue 3 + Vite + Element Plus on the web, and
 Rust + egui for the natively drawn exam-room client.
+
+## On open source
+
+**The source is not published yet.** The system is still being polished and certainly still has
+rough edges that have not surfaced; opening the code now would mostly help people run a real exam
+on something that is not ready. It will be opened once it has settled.
+
+What this repository ships is the deployable build — server, frontend and exam-room client. It is
+the complete thing, not a trial. Issues are welcome.
 
 ## Licence
 
