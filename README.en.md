@@ -23,8 +23,15 @@ settles. Unpack and deploy.
 
 ---
 
+## The whole thing on one page
+
+![rexam end to end](docs/flow.en.png)
+
+---
+
 ## Contents
 
+- [The whole thing on one page](#the-whole-thing-on-one-page)
 - [Who it is for](#who-it-is-for)
 - [Two ways to sit an exam](#two-ways-to-sit-an-exam)
 - [Questions and papers](#questions-and-papers)
@@ -104,9 +111,32 @@ lines and filled in two answers.
 
 ![Randomised paper](docs/screenshots/web-en/05-random-paper.png)
 
-For bulk entry, paste JSON into the importer; the format is documented in the UI.
-
 ![Question bank](docs/screenshots/web-en/03-questions.png)
+
+### Bulk import: three ways in, one way through
+
+Nobody types two hundred questions by hand. Three sources, all of which end up in the same
+preview table, and **nothing reaches the database until you press Import**:
+
+| Source | How it works |
+|---|---|
+| **Spreadsheet** | Pick an Excel (.xlsx) or CSV file. One question per row; column names are matched in English or Chinese, and the dialog will hand you a template. All eight types are supported |
+| **Text (AI)** | Paste questions straight out of Word and the AI turns them into drafts |
+| **JSON** | The original format, still there for scripted imports |
+
+![Bulk import](docs/screenshots/web-en/16-import.png)
+
+The spreadsheet is parsed in the browser — the file never reaches the server. GBK-encoded CSV
+(what WPS exports by default), title rows above the header, and gaps in the columns are all
+handled. When a row cannot be imported, the reason sits on that row: "the answer refers to C,
+which has no option" is worth rather more than "import failed".
+
+If the column names do not match the template, do not go back and edit the header — press
+"Let the AI sort it out" and the whole sheet goes to the model.
+
+> **Anything the AI produces lands in the preview table first, and only an explicit Import writes
+> it to the database.** The model will invent answers; this step is not optional. If the server
+> has no AI configured, the tab says so outright instead of spinning.
 
 ---
 
