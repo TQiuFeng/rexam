@@ -32,6 +32,7 @@ settles. Unpack and deploy.
 - [Marking and results](#marking-and-results)
 - [System monitoring](#system-monitoring)
 - [The exam-room client](#the-exam-room-client)
+- [The invigilator console](#the-invigilator-console)
 - [Deployment](#deployment)
 - [Before you expose it](#before-you-expose-it)
 - [Scale](#scale)
@@ -234,6 +235,57 @@ boxes).
 On the question palette, **filled means answered and hollow means unanswered** — never green.
 Nothing has been marked yet, and a candidate reads green as "I got that one right".
 
+## The invigilator console
+
+A small program that runs on **the teacher's own computer** (`proctor/rexam-proctor.exe`).
+Its only purpose is to make exam machines need no configuration at all.
+
+Three steps for the teacher: **sign in, pick a published exam, press "start"**. From then on it
+broadcasts "I am here" on the LAN every two seconds; each exam machine hears it at boot and
+connects, and the console uses the teacher's credentials to claim a seat from the server for that
+machine, handing back which server, which exam and which seat number.
+
+The screen shows **"N attached / M expected"** plus each machine's seat number, hostname and IP.
+That count is the setup progress: sixty machines booted should read 60/60. At the end, press
+"Release All".
+
+It **does not mark, does not compute deadlines, and does not decide who sits where** — the seat
+assignment is a call to the server. Marking and timing rules exist in exactly one place, the
+server; a second implementation in the console would only guarantee the two disagree eventually.
+
+### What it deliberately does not do
+
+- **You can run an exam without it.** Machines installed with `--server`, `--room-code` and
+  `--seat-no` still bind directly; the console just moves those three from install time to exam time.
+- **Exam machines still talk to the server themselves.** The console never relays exam traffic, so
+  closing it mid-exam does not disturb anyone who is already working.
+- **It cannot collect papers in a room with no internet.** That needs offline exam packs, locally
+  issued candidate credentials, question text inside the pack and on-disk answer buffering — each
+  its own design, none of it built yet.
+
+### What must be open on the LAN
+
+| | Port | Listener |
+|---|---|---|
+| Discovery | UDP 45301 | both sides (broadcast + multicast 239.255.73.77) |
+| Setup | TCP 45300 | the console |
+
+If a machine finds the console but cannot connect, it is **almost always the firewall on the
+teacher's computer blocking inbound connections** — outbound broadcast still goes out, so it looks
+a lot like "cannot find it". The exam machine says so on screen in as many words.
+
+### On trust
+
+LAN discovery is plain UDP and **anyone can broadcast a fake beacon**. So:
+
+- a beacon is only a hint, and it carries **no IP** — the address is always taken from the UDP
+  source, otherwise one forged packet could point a whole room at any host;
+- a machine installed with `--server` accepts only that address, so a fake console cannot redirect it;
+- if the teacher's "N attached / M expected" does not add up, machines went somewhere else.
+
+This step has **no TLS and no key pinning**. The threat model reaches "wrong configuration and
+slips of the hand", not "an active attacker on the same segment". Saying so beats implying otherwise.
+
 ### Letting candidates leave
 
 **The invigilator decides, not the machine in front of the candidate.**
@@ -287,19 +339,35 @@ process too, so a machine is never handed back to the lab with Task Manager stil
 
 ### Installing on an exam machine
 
-**One command**, no file editing:
+**One command, with no arguments at all:**
 
 ```bat
-rexam-client.exe --install --server=https://exam.example.com
+rexam-client.exe --install
 ```
 
 It writes `config.toml` itself and registers itself to start at boot (a Run entry under `HKCU`, so
-no administrator rights), then exits. A deployment script loops over the machines and is done.
+no administrator rights), then exits. A deployment script loops over the machines and is done;
 `--uninstall` removes the autostart entry.
 
-**No password needed.** Letting candidates go is done from the invigilation page: the teacher
+**Server address, room code and seat number are all left blank.** The teacher opens the
+**invigilator console** on their own machine, signs in and picks an exam; each exam machine finds
+it on the LAN at boot and collects all three. See [The invigilator console](#the-invigilator-console).
+
+**No password either.** Letting candidates go is done from the invigilation page: the teacher
 releases the seat and the unlock travels down to the machine. Nothing is typed on the exam
 machine itself.
+
+> **For high-stakes exams, pin the server:**
+>
+> ```bat
+> rexam-client.exe --install --server=https://exam.example.com
+> ```
+>
+> With that, the machine accepts only this address and ignores whatever the console hands down.
+> The value is **the same on every machine in the school** — it is not per-machine work, a
+> deployment script writes it once. Why bother: LAN discovery is plain UDP and anyone can
+> broadcast a fake beacon. Once pinned, a fake console can at worst stop the machine connecting;
+> it cannot redirect it.
 
 **The seat number is optional**: without `--seat-no` the machine stops at the binding screen for the
 invigilator to type the room code and seat once. Rooms with a fixed seating chart keep passing
@@ -426,6 +494,7 @@ admin-only.
 | `server/.env.example` | Config template. Copy to `.env` next to the executable. |
 | `client/rexam-client.exe` | Exam-room client, Windows x64. One file, no runtime. |
 | `client/config.toml.example` | Client config template; every setting says what changing it does. |
+| `proctor/rexam-proctor.exe` | Invigilator console, Windows x64. Runs on the teacher's own computer; it is what lets exam machines need no configuration. |
 | `web/` | Compiled frontend — static files for nginx or any web server. |
 | `deploy/` | nginx site config and a systemd unit. |
 | `docs/监考操作手册.md` | End-to-end manual for teachers (Chinese), no technical background needed. |
