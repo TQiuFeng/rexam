@@ -1,8 +1,17 @@
-# 文本按仓库里的 LF 存，检出时按平台。二进制一律不转换，
-# 不标的话 Windows 上的 autocrlf 有可能把 exe 里的字节改掉。
-* text=auto eol=lf
-*.exe binary
-*.png binary
-*.woff binary
-*.woff2 binary
-*.ttf binary
+# 这个仓库只放编译产物，没有源码。
+
+# web/assets 是 Vite 打包出来的。不标掉的话，代码托管平台会按行数统计，
+# 把整个项目标成「JavaScript 100%」—— 一个考试系统的后端是 Rust，
+# 前端是 Vue，这个标签只会让人误会。顺便也让这些文件的 diff 默认折叠。
+web/assets/**        linguist-generated=true
+
+# 文档和截图不参与语言统计
+docs/**              linguist-documentation=true
+
+# 可执行文件按二进制处理，不要尝试做行级 diff、也不要动换行
+*.exe                binary
+*.png                binary
+
+# 文本文件统一用 LF 存库，检出时按平台还原
+*.md                 text
+*.conf               text
