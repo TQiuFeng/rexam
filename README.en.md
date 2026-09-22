@@ -288,19 +288,30 @@ Nothing has been marked yet, and a candidate reads green as "I got that one righ
 ## The invigilator console
 
 A small program that runs on **the teacher's own computer** (`proctor/rexam-proctor.exe`).
-Its only purpose is to make exam machines need no configuration at all.
+On exam day it is used for check-in and for watching the room; before the exam, maintenance staff
+use it to get the machines seated.
 
-Three steps for the teacher: **sign in, pick a published exam, press "start"**. From then on it
-broadcasts "I am here" on the LAN every two seconds; each exam machine hears it at boot and
-connects, and the console uses the teacher's credentials to claim a seat from the server for that
-machine, handing back which server, which exam and which seat number.
+Sign in, pick an exam, enter the room, and it lands on the **board**: one tile per computer, tiled
+like a wall of monitors, with the exam's schedule along the top (when it opens, when it closes, how
+long is left). Offline machines turn red. Clicking any tile lets you check the photo, grant extra
+time, or force a submission.
 
-The screen shows **"N attached / M expected"** plus each machine's seat number, hostname and IP.
-That count is the setup progress: sixty machines booted should read 60/60. At the end, press
-"Release All".
+![Invigilator board](docs/screenshots/proctor/01-board.png)
 
-It **does not mark, does not compute deadlines, and does not decide who sits where** — the seat
-assignment is a call to the server. Marking and timing rules exist in exactly one place, the
+**Check-in** is the next tab. The candidate gives their name, you search, **you confirm the face
+against the photo on file**, and you check them in. In rooms configured for *draw on arrival*, that
+same press picks a free machine at random and shows the number in large type; in rooms where seats
+were assigned in advance it simply records the arrival. The draw happens on the server under a
+per-exam lock, so two teachers checking people in at once can never send two candidates to the same
+machine.
+
+**Provisioning** is the third tab, for maintenance: once started it broadcasts "I am here" on the
+LAN every two seconds, and each exam machine hears it at boot and comes to collect a seat number.
+The screen shows "N attached / M expected" plus beacon counts, hostnames and IPs — the things you
+need when the network misbehaves.
+
+It **does not mark, does not compute deadlines, and does not decide who sits where** — seating and
+the draw are both calls to the server. Marking and timing rules exist in exactly one place, the
 server; a second implementation in the console would only guarantee the two disagree eventually.
 
 ### What it deliberately does not do
