@@ -165,6 +165,26 @@ switched away from the window. There is a seat-map view and a list view. A teach
 
 ![Live invigilation](docs/screenshots/web-en/07-proctor.png)
 
+### Check-in: verify the face against the record
+
+Checking identity before the exam takes more than a name list — the teacher has a sheet of
+paper and a person standing in front of them. So the seat card carries the **candidate's
+photo**: open a seat and the photo, the name and the username sit together. If they match,
+the candidate sits down.
+
+![Photo check-in](docs/screenshots/web-en/17-photo-checkin.png)
+
+Photos are imported in bulk from the user admin page: pick a zip (or just select the images)
+and they are matched by file name — username first, real name second. **Duplicates are never
+guessed**; they are flagged so you can rename the file, because the wrong face on a seat card
+is worse than no face at all. Each image is shrunk to 256x256 in the browser, so the 4 MB
+originals off someone's phone never reach the database.
+
+> These are **portrait photos**, not scans of identity cards. Scans are sensitive personal
+> data and storing them takes a different regime (encryption, access logs, retention limits);
+> this system does not go there. Photos are readable by teachers and admins only, and deleting
+> one deletes it for real.
+
 **Answers do not get lost.** Every answer is written back to the server as it is given: into
 Redis first, then flushed into PostgreSQL in batches by a background job. After a power cut, a
 blue screen or a dropped network the candidate resumes exactly where they were. The countdown
