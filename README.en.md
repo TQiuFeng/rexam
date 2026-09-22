@@ -165,6 +165,26 @@ switched away from the window. There is a seat-map view and a list view. A teach
 
 ![Live invigilation](docs/screenshots/web-en/07-proctor.png)
 
+### Schedules: several days in a row, and whether seats carry over
+
+A room hosts exams on consecutive days and the same cohort keeps coming back. Do you draw
+machines again before every session? **The system does not decide for you** — chain the exams
+into a schedule and choose per session:
+
+![Exam schedules](docs/screenshots/web-en/18-schedule.png)
+
+| Option | When you want it |
+|---|---|
+| **Draw again** | A fixed seat is an opening for cheating; schools that require a fresh draw every time pick this |
+| **Carry over** | Candidates already know where their machine is, so they sit down faster and go to the right place |
+
+The first session is always a fresh draw — there is no previous session to carry over from. That
+rule is enforced on the server, not merely greyed out in the UI.
+
+> **Carrying over is not guaranteed.** The machine may be switched off, or somebody else may
+> already have drawn it. Check-in then falls back to a random free machine and **says so plainly
+> on the console** — nobody sends a candidate to last session's seat by mistake.
+
 ### Check-in: verify the face against the record
 
 Checking identity before the exam takes more than a name list — the teacher has a sheet of
