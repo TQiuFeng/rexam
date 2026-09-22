@@ -185,6 +185,25 @@ rule is enforced on the server, not merely greyed out in the UI.
 > already have drawn it. Check-in then falls back to a random free machine and **says so plainly
 > on the console** — nobody sends a candidate to last session's seat by mistake.
 
+### The room: how seats are handed out, and how many spares to hold back
+
+**Seats are always drawn on the spot.** The candidate arrives, the proctor hits "Draw a seat", and
+the system picks a free machine at random. There is no option to assign seats in advance — a
+candidate who knows which machine they will sit at defeats the point of drawing at all.
+
+![Creating an exam - the room](docs/screenshots/web-en/19-exam-room.png)
+
+When you create the exam you also decide **how many spare machines to hold back**. A room needs a
+machine or two that never goes out: when someone's PC freezes, drops off the network or loses its
+keyboard mid-exam, you need one you know works. The **highest-numbered seats** are the ones held
+back — usually the back row, so moving someone there disturbs the fewest people — and they stay out
+of the draw.
+
+> It is not an absolute rule, though: if the room genuinely runs out, handing out a spare beats
+> leaving a candidate standing. When that happens the console says so in plain words — "the free
+> machines ran out, this is a spare". Handing one out silently means that when a machine does break,
+> there is nothing left to fall back on.
+
 ### Check-in: verify the face against the record
 
 Checking identity before the exam takes more than a name list — the teacher has a sheet of
@@ -276,9 +295,10 @@ goes quiet for more than four times its interval it is flagged as stalled. That 
 Windows x64, a single exe, no runtime to install, no browser involved. Set `lang = "en"` and
 the whole interface is English, as in the screenshots below.
 
-**Candidates type nothing.** Seats are assigned in advance; the machine binds itself to its seat
-number at boot and starts polling. When the proctor starts the exam, the server hands down the
-credential for the candidate in that seat and the client walks into the paper.
+**Candidates type nothing.** At boot the machine binds itself to a **seat number** and starts
+polling — it binds to the seat, not to a person; the person arrives later, when the proctor draws
+them that seat at random. Once a seat has been drawn and the proctor starts the exam, the server
+hands down the credential for the candidate in that seat and the client walks into the paper.
 
 | | |
 |---|---|
@@ -318,17 +338,25 @@ time, or force a submission.
 
 ![Invigilator board](docs/screenshots/proctor/01-board.png)
 
-**Check-in** is the next tab. The candidate gives their name, you search, **you confirm the face
-against the photo on file**, and you check them in. In rooms configured for *draw on arrival*, that
-same press picks a free machine at random and shows the number in large type; in rooms where seats
-were assigned in advance it simply records the arrival. The draw happens on the server under a
-per-exam lock, so two teachers checking people in at once can never send two candidates to the same
-machine.
+**Check-in** is the next page. The candidate gives their name, you search, **you confirm the face
+against the photo on file**, and you draw them a seat: the system picks a free machine at random and
+shows the number in large type. With an empty search box the page simply lists **everyone who has
+not drawn yet**, so most of the time you just click the person at the front of the queue. The draw
+happens on the server under a per-exam lock, so two teachers checking people in at once can never
+send two candidates to the same machine.
 
-**Provisioning** is the third tab, for maintenance: once started it broadcasts "I am here" on the
+Next to the number the console spells out *why it is that machine*: carried over from the previous
+session, taken from the spares, or the same one they drew earlier. Swapping a machine silently is
+how a teacher ends up sending someone to last session's seat.
+
+![Check-in on the console](docs/screenshots/proctor/02-checkin.png)
+
+**Provisioning** is the third page, for maintenance: once started it broadcasts "I am here" on the
 LAN every two seconds, and each exam machine hears it at boot and comes to collect a seat number.
-The screen shows "N attached / M expected" plus beacon counts, hostnames and IPs — the things you
-need when the network misbehaves.
+A row of readings across the top is the progress — "N / M attached", beacons broadcast, packets sent
+in the last round, probes received — and under it every machine that has checked in, one per line
+with its hostname, IP and the moment it arrived. These are the things you need when the network
+misbehaves.
 
 It **does not mark, does not compute deadlines, and does not decide who sits where** — seating and
 the draw are both calls to the server. Marking and timing rules exist in exactly one place, the
