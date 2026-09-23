@@ -232,6 +232,30 @@ changes nothing.
 
 ---
 
+### Release the marks, or don't
+
+Both work — and **you can leave that decision until after the exam**.
+
+"Show score after submitting", set when you create the exam, decides what candidates see
+*the moment they submit*: on for a quick class quiz so they can check their own answers,
+off for a real exam, where all they see is "Submitted".
+
+Off is not the end of it. Once the papers are marked and the totals checked, one click on
+**Release results** on the exam page and every candidate can see their total and their marks
+per question.
+
+![Releasing results](docs/screenshots/web-en/20-release.png)
+
+> **It works on closed exams too**, which is exactly why it is its own action rather than a
+> switch on the exam form. Marking happens after the exam, by which point the exam is locked —
+> the paper, the timing and the pass mark can no longer be changed, or the results would not be
+> trustworthy. Deciding whether candidates may *see* their marks changes no marks at all, so the
+> lock stays and this one narrow thing gets its own door.
+
+Think before ticking "also release the correct answers": once they are out, they are public, and
+the paper should not be reused. A release can be **withheld** again, but that does not unsee
+anything — whoever already looked remembers their mark.
+
 ## Marking and results
 
 The first seven types are marked the moment the paper is submitted. Free-text answers, and
