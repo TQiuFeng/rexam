@@ -193,15 +193,35 @@ candidate who knows which machine they will sit at defeats the point of drawing 
 
 ![Creating an exam - the room](docs/screenshots/web-en/19-exam-room.png)
 
-When you create the exam you also write down **where it is** — one line like "Science Building
-302 - Lab 1". That line is what a candidate sees on their exam list; without it they know when
-the exam is but not which way to walk. Previously used locations come back as suggestions, so the
-same lab does not end up spelled three different ways.
+When you create an exam you pick a **room** from a registry: which building, which room number,
+how many machines it has.
 
-> Do not confuse it with the **room code**: that is the 6-character code typed into the exam
-> machines, and it goes to the invigilator only. The location is for people. There is deliberately
-> **no facilities management** here — how many machines a lab has, who has it booked today, clash
-> detection — that is a different module. This only tells people where to go.
+![Rooms](docs/screenshots/web-en/20-rooms.png)
+
+Picking a room buys you three things:
+
+| | |
+|---|---|
+| **Candidates know where to go** | Their exam list shows "Science Building 302 - Lab 1" instead of needing a separate announcement |
+| **Whether it fits is worked out for you** | "40 machines, 2 held back as spares, so 38 can go out." A bigger roster than that gets a warning on the exam page — **a warning, not a block**: teachers know who will not turn up and can move machines in |
+| **Clashes are blocked** | Same room, overlapping window, neither a draft = a clash. Publishing is refused with the name of the exam you clashed with and its times |
+
+![Room bookings](docs/screenshots/web-en/21-room-usage.png)
+
+The block lands at **publish** time; drafts only get a warning — a draft is a draft, and teachers
+often create several and then adjust the times. Publishing is the moment they say "this is final",
+and that moment has to be clean. Overlap uses a half-open interval, so **back-to-back exams do not
+clash**: 9:00–11:00 followed by 11:00–13:00 is a normal way to run a day.
+
+Rooms are **retired rather than deleted**: one that has hosted exams cannot be deleted, and the
+system tells you to retire it instead — retired rooms leave the picker but stay visible on the
+exams already held there. The location stored on an exam is a **snapshot**, so renaming a room
+later does not rewrite where past exams were held — the same reasoning as freezing the paper in
+`attempts.paper_snapshot`.
+
+> Do not confuse a room with the **room code**: the code is the 6-character string typed into the
+> exam machines and goes to the invigilator only. Deliberately absent: booking approval workflows,
+> equipment inventories, floor plans. This is an exam system, not a room-booking system.
 
 When you create the exam you also decide **how many spare machines to hold back**. A room needs a
 machine or two that never goes out: when someone's PC freezes, drops off the network or loses its
