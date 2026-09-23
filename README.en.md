@@ -193,6 +193,16 @@ candidate who knows which machine they will sit at defeats the point of drawing 
 
 ![Creating an exam - the room](docs/screenshots/web-en/19-exam-room.png)
 
+When you create the exam you also write down **where it is** — one line like "Science Building
+302 - Lab 1". That line is what a candidate sees on their exam list; without it they know when
+the exam is but not which way to walk. Previously used locations come back as suggestions, so the
+same lab does not end up spelled three different ways.
+
+> Do not confuse it with the **room code**: that is the 6-character code typed into the exam
+> machines, and it goes to the invigilator only. The location is for people. There is deliberately
+> **no facilities management** here — how many machines a lab has, who has it booked today, clash
+> detection — that is a different module. This only tells people where to go.
+
 When you create the exam you also decide **how many spare machines to hold back**. A room needs a
 machine or two that never goes out: when someone's PC freezes, drops off the network or loses its
 keyboard mid-exam, you need one you know works. The **highest-numbered seats** are the ones held
