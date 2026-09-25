@@ -148,7 +148,13 @@ deadline is the earlier of "their start time plus the duration" and "the end of 
 
 An exam is a draft, published, or closed. A draft never reaches candidates; publishing is what
 makes it appear under a candidate's "My exams"; closing it force-submits every paper still
-outstanding.
+outstanding. The interface further splits exams by time into **phases** (upcoming, in progress,
+ended but not yet closed); the list has a tab per phase, with running exams on top.
+
+Staff land on a **dashboard** after signing in: what is running, how many candidates have
+started, what is coming in the next 7 days, and how many papers are waiting to be graded.
+
+![Dashboard](docs/screenshots/web-en/00-home.png)
 
 ![Exam list](docs/screenshots/web-en/02-exams.png)
 
