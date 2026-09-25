@@ -35,11 +35,11 @@ settles. Unpack and deploy.
 
 | Part | Stack | Notes |
 |---|---|---|
-| Server | Rust · axum 0.8 · tokio · sqlx 0.8 | One executable; creates its tables on first start; background jobs (answer flush, deadline submit, AI grading, resource sampling) run in the same process |
-| Data | PostgreSQL 16 · Redis 6.2+ | PostgreSQL is the only source of truth; Redis is just an answer buffer and queues (progress and deadlines live in the database; Redis only holds the last few seconds not yet flushed) |
-| Web | Vue 3 · Element Plus · Vite | Admin, candidate and seat pages in one bundle; Chinese and English, and a missing translation fails the build |
-| Exam-room client | Rust · egui 0.36 · Win32 | One executable, no browser; two lockdown levels (keyboard hook / foreground guard / Task Manager and USB switches) |
-| Invigilator app | Rust · egui 0.36 | One executable: seat board, check-in, room setup |
+| Server | Rust<br>axum 0.8<br>tokio<br>sqlx 0.8 | One executable; creates its tables on first start; background jobs (answer flush, deadline submit, AI grading, resource sampling) run in the same process |
+| Data | PostgreSQL 16<br>Redis 6.2+ | PostgreSQL is the only source of truth; Redis is just an answer buffer and queues (progress and deadlines live in the database; Redis only holds the last few seconds not yet flushed) |
+| Web | Vue 3<br>Element Plus<br>Vite | Admin, candidate and seat pages in one bundle; Chinese and English, and a missing translation fails the build |
+| Exam-room client | Rust<br>egui 0.36<br>Win32 | One executable, no browser; two lockdown levels (keyboard hook / foreground guard / Task Manager and USB switches) |
+| Invigilator app | Rust<br>egui 0.36 | One executable: seat board, check-in, room setup |
 | AI grading | OpenAI-compatible API | DeepSeek / Qwen by default; retries on failure and hands anything it can't grade to a teacher |
 | Auth | JWT | Candidates and staff sign in; room PCs authenticate as a *seat*, and the server hands that seat's candidate token down at start time |
 
