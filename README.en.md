@@ -23,6 +23,53 @@ settles. Unpack and deploy.
 
 ---
 
+## Technical design
+
+```
+  Candidate browser ─┐                                    ┌─ PostgreSQL 16   questions / papers / exams / scores (durable)
+  Exam-room client  ─┼─ nginx ─┬─ API nodes ×N (stateless) ┤
+  Invigilator app   ─┘  static └─ …                        └─ Redis           answer buffer / flush queue / AI queue
+          ▲                           │
+          └── LAN UDP probe / beacon ─┘ (room PCs find the invigilator app, zero setup)      DeepSeek / Qwen (OpenAI-compatible)
+```
+
+| Part | Stack | Notes |
+|---|---|---|
+| Server | Rust · axum 0.8 · tokio · sqlx 0.8 | One executable; creates its tables on first start; background jobs (answer flush, deadline submit, AI grading, resource sampling) run in the same process |
+| Data | PostgreSQL 16 · Redis 6.2+ | PostgreSQL is the only source of truth; Redis is just an answer buffer and queues (progress and deadlines live in the database; Redis only holds the last few seconds not yet flushed) |
+| Web | Vue 3 · Element Plus · Vite | Admin, candidate and seat pages in one bundle; Chinese and English, and a missing translation fails the build |
+| Exam-room client | Rust · egui 0.36 · Win32 | One executable, no browser; two lockdown levels (keyboard hook / foreground guard / Task Manager and USB switches) |
+| Invigilator app | Rust · egui 0.36 | One executable: seat board, check-in, room setup |
+| AI grading | OpenAI-compatible API | DeepSeek / Qwen by default; retries on failure and hands anything it can't grade to a teacher |
+| Auth | JWT | Candidates and staff sign in; room PCs authenticate as a *seat*, and the server hands that seat's candidate token down at start time |
+
+The decisions that shape the system:
+
+- **Answers are not lost.** Each change is debounced for one second and written to Redis, with a copy kept on the
+  candidate's machine; every three seconds a background job flushes Redis into PostgreSQL in batches. Offline, the
+  local copy is the safety net and is re-sent when the network returns; if the network drops at the very deadline,
+  the page keeps retrying through the server's grace period and neither clears the local copy nor navigates away
+  until the answers have landed.
+- **Only the server's clock counts.** The deadline is fixed and stored when the candidate starts. A wrong clock on
+  the room PC changes nothing, and a candidate who loses power resumes with the time the server says is left.
+- **Submission is idempotent.** The candidate's own submit, the deadline, a teacher's force-submit and the
+  window-switch limit can all race; only one counts, and repeats return the same result.
+- **API nodes are stateless.** Sessions live in the JWT and answers in Redis, so any number of nodes can sit behind
+  nginx; scaling out means adding machines.
+- **Grading rules live on the server.** How each of the eight question types is scored, partial credit for
+  multiple choice, equivalent answers for fill-in: all computed server-side. Clients only collect answers.
+- **The seat is the identity.** A room PC is bound to "room code + seat number", not an account. Candidates type
+  nothing; the server hands down the candidate's identity for that seat when the exam starts.
+- **Colour does not lie.** Green is reserved for "graded and correct". Question types, "submitted" and "graded" use
+  neutral colours, so nobody reads "done" as "right".
+
+Measured on a four-core dev machine with the database on the same box: **200 simultaneous submissions, graded, in
+368 ms, with nothing lost.** Reliability is shown by running it, not by claiming it: 61 hardening checks, 11
+concurrency checks, 18 power-loss recovery checks and 81 API contract checks, plus real-browser smoke tests where
+the network drops, the page reloads and the deadline passes inside an actual Chrome, in both languages.
+
+---
+
 ## The whole thing on one page
 
 ![rexam end to end](docs/flow.en.png)
@@ -31,6 +78,7 @@ settles. Unpack and deploy.
 
 ## Contents
 
+- [Technical design](#technical-design)
 - [The whole thing on one page](#the-whole-thing-on-one-page)
 - [Who it is for](#who-it-is-for)
 - [Two ways to sit an exam](#two-ways-to-sit-an-exam)
