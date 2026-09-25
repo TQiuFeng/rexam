@@ -439,15 +439,18 @@ A small program that runs on **the teacher's own computer** (`proctor/rexam-proc
 On exam day it is used for check-in and for watching the room; before the exam, maintenance staff
 use it to get the machines seated.
 
-Sign in, pick an exam, enter the room, and it lands on the **board**: one tile per computer, tiled
-like a wall of monitors, with the exam's schedule along the top (when it opens, when it closes, how
-long is left). Offline machines turn red. Clicking any tile lets you check the photo, grant extra
-time, or force a submission.
+Sign in, pick an exam, enter the room, and it lands on the **board**: one tile per computer, spread
+across the full width like a wall of monitors. The most prominent things on a tile are the **large
+seat number** and the **candidate's photo and name**, because in the room you match the number to the
+machine and the photo to the person. A strip along the top counts expected / arrived / answering /
+submitted / offline. Offline tiles get a red border, answering ones a blue bar on the left, submitted
+ones go grey. Clicking any tile lets you check the photo, grant extra time, or force a submission.
 
 ![Invigilator board](docs/screenshots/proctor/01-board.png)
 
-**Check-in** is the next page. The candidate gives their name, you search, **you confirm the face
-against the photo on file**, and you draw them a seat: the system picks a free machine at random and
+**Check-in** is the next page: a list on the left, a verification panel on the right. The candidate
+gives their name, you search, their **large photo** appears on the right, **you confirm the face
+against it**, and you draw them a seat: the system picks a free machine at random and
 shows the number in large type. With an empty search box the page simply lists **everyone who has
 not drawn yet**, so most of the time you just click the person at the front of the queue. The draw
 happens on the server under a per-exam lock, so two teachers checking people in at once can never
